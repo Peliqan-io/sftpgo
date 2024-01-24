@@ -46,23 +46,21 @@ RUN groupadd --system -g 1000 sftpgo && \
     --home-dir /var/lib/sftpgo --shell /usr/sbin/nologin \
     --comment "SFTPGo user" --uid 1000 sftpgo
 
-COPY --from=builder /workspace/sftpgo.json /etc/sftpgo/sftpgo.json
+# Sftp.json file should be mounted as a volume 
+# COPY --from=builder /workspace/sftpgo.json /etc/sftpgo/sftpgo.json
 COPY --from=builder /etc/ssh/moduli /etc/sftpgo/moduli
 COPY --from=builder /workspace/templates /usr/share/sftpgo/templates
 COPY --from=builder /workspace/static /usr/share/sftpgo/static
 COPY --from=builder /workspace/openapi /usr/share/sftpgo/openapi
 COPY --from=builder /workspace/sftpgo /usr/local/bin/sftpgo-plugin-* /usr/local/bin/
+COPY --from=builder /workspace/docker-entrypoint.sh /etc/sftpgo/docker-entrypoint.sh
 
 # Log to the stdout so the logs will be available using docker logs
 ENV SFTPGO_LOG_FILE_PATH=""
-
-# Modify the default configuration file
-RUN sed -i 's|"users_base_dir": "",|"users_base_dir": "/srv/sftpgo/data",|' /etc/sftpgo/sftpgo.json && \
-    sed -i 's|"backups"|"/srv/sftpgo/backups"|' /etc/sftpgo/sftpgo.json
 
 RUN chown -R sftpgo:sftpgo /etc/sftpgo /srv/sftpgo && chown sftpgo:sftpgo /var/lib/sftpgo && chmod 700 /srv/sftpgo/backups
 
 WORKDIR /var/lib/sftpgo
 USER 1000:1000
 
-CMD ["sftpgo", "serve"]
+CMD ["/bin/sh", "/etc/sftpgo/docker-entrypoint.sh"]
